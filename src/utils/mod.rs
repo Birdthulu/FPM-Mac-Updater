@@ -1,12 +1,12 @@
 use parallel_getter::ParallelGetter;
 use reqwest;
 use serde::Deserialize;
+use std::path::PathBuf;
 use std::{
-    fs::{create_dir_all, set_permissions, File, Permissions},
+    fs::{create_dir_all, remove_dir_all, remove_file, set_permissions, File, Permissions},
     io::copy,
     path::Path,
 };
-use tempfile::tempdir;
 use zip::ZipArchive;
 
 #[derive(Debug, Deserialize)]
@@ -22,10 +22,12 @@ pub struct UpdateInformation {
 }
 
 pub async fn parallel_download(update_information: UpdateInformation) {
-    let t = update_information.download_page_windows.as_str();
-    let url = "http://download1394.mediafire.com/vksc782np9dg/7yt5o4vci83mid0/Project%2B+v2.15+Netplay+%28Windows%29.zip";
+    let url = update_information.download_page_windows.as_str();
 
-    let temp_dir = tempdir().unwrap().into_path();
+    println!("Downloading files from {}", url);
+
+    create_dir_all("./temp");
+    let temp_dir = PathBuf::from("./temp");
     let mut file = File::create("pplus.zip").unwrap();
 
     ParallelGetter::new(url, &mut file)
@@ -37,9 +39,21 @@ pub async fn parallel_download(update_information: UpdateInformation) {
         .threshold_parallel(1 * 1024 * 1024)
         // threshold for defining when to store parts in memory or on disk.
         .threshold_memory(10 * 1024 * 1024)
+        // Callback for monitoring progress.
+        .callback(
+            5500,
+            Box::new(|progress, total| {
+                println!(
+                    "{} MiB of {} MiB downloaded",
+                    (progress / 1024) / 1024,
+                    (total / 1024) / 1024
+                );
+            }),
+        )
         // Commit the parallel GET requests.
         .get()
         .unwrap();
+    remove_dir_all("./temp");
 }
 
 pub async fn get_download_information() -> UpdateInformation {
@@ -67,6 +81,7 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
 
     for i in 0..zip_file.len() {
         let mut file = zip_file.by_index(i).unwrap();
+        println!("Extracting: {}", file.name());
         let outpath = file.sanitized_name();
 
         {
@@ -109,4 +124,5 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
             }
         }
     }
+    remove_file("./pplus.zip");
 }
