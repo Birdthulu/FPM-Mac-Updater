@@ -28,7 +28,7 @@ pub async fn parallel_download(update_information: UpdateInformation) {
 
     create_dir_all("./temp");
     let temp_dir = PathBuf::from("./temp");
-    let mut file = File::create("pplus.zip").unwrap();
+    let mut file = File::create("./temp/temp.zip").unwrap();
 
     ParallelGetter::new(url, &mut file)
         // Optional path to store the parts.
@@ -53,7 +53,6 @@ pub async fn parallel_download(update_information: UpdateInformation) {
         // Commit the parallel GET requests.
         .get()
         .unwrap();
-    remove_dir_all("./temp");
 }
 
 pub async fn get_download_information() -> UpdateInformation {
@@ -70,7 +69,7 @@ pub async fn get_download_information() -> UpdateInformation {
 }
 
 pub async fn get_file() -> ZipArchive<File> {
-    let path = Path::new("./pplus.zip");
+    let path = Path::new("./temp/temp.zip");
     let file = File::open(path).unwrap();
     let zip_file = ZipArchive::new(file).unwrap();
     zip_file
@@ -124,5 +123,5 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
             }
         }
     }
-    remove_file("./pplus.zip");
+    remove_dir_all("./temp");
 }
