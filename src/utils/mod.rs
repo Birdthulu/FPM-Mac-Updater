@@ -9,6 +9,7 @@ use std::{
 };
 use zip::ZipArchive;
 use std::env;
+use std::process::Command;
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateInformation {
@@ -135,4 +136,17 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
         }
     }
     remove_dir_all("./temp");
+
+    if env::consts::OS == ("windows") 
+    {
+        Command::new("Dolphin.exe")
+                .spawn()
+                .expect("failed to execute process")
+    } 
+    else 
+    {
+        Command::new("Dolphin.app")
+                .spawn()
+                .expect("failed to execute process")
+    };
 }
