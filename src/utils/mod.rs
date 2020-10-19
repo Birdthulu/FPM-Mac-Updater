@@ -20,8 +20,6 @@ pub struct UpdateInformation {
     pub download_page_windows: String,
     #[serde(rename = "download-page-mac")]
     pub download_page_mac: String,
-    #[serde(rename = "download-page-linux")]
-    pub download_page_linux: String,
 }
 
 pub async fn parallel_download(update_information: UpdateInformation) {
@@ -35,11 +33,6 @@ pub async fn parallel_download(update_information: UpdateInformation) {
     {
         println!("Mac");
         url = update_information.download_page_mac.as_str().to_string();
-    }
-    else if env::consts::OS == ("linux")
-    {
-        println!("Linux");
-        url = update_information.download_page_linux.as_str().to_string();
     }
 
     println!("Downloading files from {}", url);
