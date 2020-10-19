@@ -8,6 +8,7 @@ use std::{
     path::Path,
 };
 use zip::ZipArchive;
+use std::env;
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateInformation {
@@ -19,10 +20,27 @@ pub struct UpdateInformation {
     pub download_page_windows: String,
     #[serde(rename = "download-page-mac")]
     pub download_page_mac: String,
+    #[serde(rename = "download-page-linux")]
+    pub download_page_linux: String,
 }
 
 pub async fn parallel_download(update_information: UpdateInformation) {
-    let url = update_information.download_page_windows.as_str();
+    let mut url = String::new();
+    if env::consts::OS == ("windows")
+    {
+        println!("Windows");
+        url = update_information.download_page_windows.as_str().to_string();
+    }
+    else if env::consts::OS == ("macos")
+    {
+        println!("Mac");
+        url = update_information.download_page_mac.as_str().to_string();
+    }
+    else if env::consts::OS == ("linux")
+    {
+        println!("Linux");
+        url = update_information.download_page_linux.as_str().to_string();
+    }
 
     println!("Downloading files from {}", url);
 
@@ -30,7 +48,7 @@ pub async fn parallel_download(update_information: UpdateInformation) {
     let temp_dir = PathBuf::from("./temp");
     let mut file = File::create("./temp/temp.zip").unwrap();
 
-    ParallelGetter::new(url, &mut file)
+    ParallelGetter::new(&url, &mut file)
         // Optional path to store the parts.
         .cache_path(temp_dir)
         // Number of theads to use.
