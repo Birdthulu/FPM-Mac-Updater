@@ -3,7 +3,7 @@ use reqwest;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::{
-    fs::{create_dir_all, remove_dir_all, remove_file, set_permissions, File, Permissions},
+    fs::{create_dir_all, remove_dir_all, File},
     io::copy,
     path::Path,
 };
@@ -38,7 +38,7 @@ pub async fn parallel_download(update_information: UpdateInformation) {
 
     println!("Downloading files from {}", url);
 
-    create_dir_all("./temp");
+    create_dir_all("./temp").expect("Could not create file");
     let temp_dir = PathBuf::from("./temp");
     let mut file = File::create("./temp/temp.zip").unwrap();
 
@@ -135,7 +135,7 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
             }
         }
     }
-    remove_dir_all("./temp");
+    remove_dir_all("./temp").expect("Could not delete file");
 
     if env::consts::OS == ("windows") 
     {
