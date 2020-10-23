@@ -3,7 +3,7 @@ use reqwest;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::{
-    fs::{create_dir_all, remove_dir_all, File},
+    fs::{create_dir_all, remove_dir_all, File, rename},
     io::copy,
     path::Path,
 };
@@ -15,6 +15,8 @@ use std::process::Command;
 pub struct UpdateInformation {
     pub hash: String,
     pub changelog: String,
+    #[serde(rename = "updater-update")]
+    pub updater_update: String,
     #[serde(rename = "update-page")]
     pub update_page: String,
     #[serde(rename = "download-page-windows")]
@@ -27,12 +29,20 @@ pub async fn parallel_download(update_information: UpdateInformation) {
     let mut url = String::new();
     if env::consts::OS == ("windows")
     {
-        println!("Windows");
+        if update_information.updater_update == ("true")
+        {
+            rename("Updater.exe", "Updater-temp.exe").expect("Could not rename file");
+        }
+
         url = update_information.download_page_windows.as_str().to_string();
     }
     else if env::consts::OS == ("macos")
     {
-        println!("Mac");
+        if update_information.updater_update == ("true")
+        {
+            rename("Updater.app", "Updater-temp.app").expect("Could not rename file");
+        }
+
         url = update_information.download_page_mac.as_str().to_string();
     }
 
@@ -135,7 +145,6 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
             }
         }
     }
-    remove_dir_all("./temp").expect("Could not delete file");
 
     if env::consts::OS == ("windows") 
     {
@@ -149,4 +158,5 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
                 .spawn()
                 .expect("failed to execute process")
     };
+    remove_dir_all("./temp").expect("Could not delete file");
 }
