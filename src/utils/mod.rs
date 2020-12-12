@@ -3,7 +3,7 @@ use reqwest;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::{
-    fs::{create_dir_all, remove_dir_all, File, rename},
+    fs::{create_dir_all, remove_dir_all, File, rename, set_permissions, Permissions},
     io::copy,
     path::Path,
 };
@@ -40,7 +40,7 @@ pub async fn parallel_download(update_information: UpdateInformation) {
     {
         if update_information.updater_update == ("true")
         {
-            rename("Updater.app", "Updater-temp.app").expect("Could not rename file");
+            rename("Updater", "Updater-temp").expect("Could not rename file");
         }
 
         url = update_information.download_page_mac.as_str().to_string();
@@ -154,7 +154,7 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
     } 
     else 
     {
-        Command::new("Dolphin.app")
+        Command::new("Dolphin.app/Contents/MacOS/Dolphin")
                 .spawn()
                 .expect("failed to execute process")
     };
