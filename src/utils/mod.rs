@@ -3,7 +3,7 @@ use reqwest;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::{
-    fs::{create_dir_all, remove_dir_all, File, rename, set_permissions, Permissions},
+    fs::{create_dir_all, remove_dir_all, File, rename},
     io::copy,
     path::Path,
 };
@@ -40,7 +40,7 @@ pub async fn parallel_download(update_information: UpdateInformation) {
     {
         if update_information.updater_update == ("true")
         {
-            rename("Updater", "Updater-temp").expect("Could not rename file");
+            rename("Dolphin.app/Contents/Resources/Updater", "Dolphin.app/Contents/Resources/Updater-temp").expect("Could not rename file");
         }
 
         url = update_information.download_page_mac.as_str().to_string();
@@ -140,7 +140,7 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
                 use std::os::unix::fs::PermissionsExt;
 
                 if let Some(mode) = file.unix_mode() {
-                    set_permissions(&outpath, Permissions::from_mode(mode)).unwrap();
+                    std::fs::set_permissions(&outpath, std::fs::Permissions::from_mode(mode)).unwrap();
                 }
             }
         }
