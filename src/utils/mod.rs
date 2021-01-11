@@ -40,7 +40,7 @@ pub async fn parallel_download(update_information: UpdateInformation) {
     {
         if update_information.updater_update == ("true")
         {
-            rename("Dolphin.app/Contents/Resources/Updater", "Dolphin.app/Contents/Resources/Updater-temp").expect("Could not rename file");
+            rename("Contents/Resources/Updater", "Contents/Resources/Updater-temp").expect("Could not rename file");
         }
 
         url = update_information.download_page_mac.as_str().to_string();
@@ -146,6 +146,8 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
         }
     }
 
+    remove_dir_all("./temp").expect("Could not delete file");
+
     if env::consts::OS == ("windows") 
     {
         Command::new("Dolphin.exe")
@@ -154,9 +156,14 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
     } 
     else 
     {
-        Command::new("Dolphin.app/Contents/MacOS/Dolphin")
+        let _ = std::fs::rename("sd.raw", "../sd.raw");
+
+        //start dolphin from the enclosing folder
+        let path = std::fs::canonicalize("Contents/MacOS/Dolphin")
+                .expect("failed to find executable");
+        std::env::set_current_dir("..").unwrap();
+        Command::new(path)
                 .spawn()
                 .expect("failed to execute process")
     };
-    remove_dir_all("./temp").expect("Could not delete file");
 }
