@@ -29,20 +29,10 @@ pub async fn parallel_download(update_information: UpdateInformation) {
     let mut url = String::new();
     if env::consts::OS == ("windows")
     {
-        if update_information.updater_update == ("true")
-        {
-            rename("Updater.exe", "Updater-temp.exe").expect("Could not rename file");
-        }
-
         url = update_information.download_page_windows.as_str().to_string();
     }
     else if env::consts::OS == ("macos")
     {
-        if update_information.updater_update == ("true")
-        {
-            rename("Contents/Resources/Updater", "Contents/Resources/Updater-temp").expect("Could not rename file");
-        }
-
         url = update_information.download_page_mac.as_str().to_string();
     }
 
@@ -79,7 +69,7 @@ pub async fn parallel_download(update_information: UpdateInformation) {
 
 pub async fn get_download_information() -> UpdateInformation {
     let update_info = reqwest::get(
-        "https://raw.githubusercontent.com/Birdthulu/birdthulu.github.io/master/Update.json",
+        "https://projectplusgame.com/update.json",
     )
     .await
     .unwrap()
