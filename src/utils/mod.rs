@@ -3,7 +3,7 @@ use reqwest;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::{
-    fs::{create_dir_all, remove_dir_all, File, rename},
+    fs::{create_dir_all, remove_dir_all, File},
     io::copy,
     path::Path,
 };
@@ -38,6 +38,7 @@ pub async fn parallel_download(update_information: UpdateInformation) {
 
     println!("Downloading files from {}", url);
 
+    //TODO use system temp dir
     create_dir_all("./temp").expect("Could not create file");
     let temp_dir = PathBuf::from("./temp");
     let mut file = File::create("./temp/temp.zip").unwrap();
@@ -68,6 +69,7 @@ pub async fn parallel_download(update_information: UpdateInformation) {
 }
 
 pub async fn get_download_information() -> UpdateInformation {
+    //TODO get this from commandline args, not hard coded
     let update_info = reqwest::get(
         "https://projectplusgame.com/update.json",
     )
@@ -89,7 +91,7 @@ pub async fn get_file() -> ZipArchive<File> {
 
 pub async fn unzip_file(zip_file: ZipArchive<File>) {
     let mut zip_file = zip_file;
-
+    
     for i in 0..zip_file.len() {
         let mut file = zip_file.by_index(i).unwrap();
         println!("Extracting: {}", file.name());
@@ -146,12 +148,38 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
     } 
     else 
     {
-        let _ = std::fs::rename("sd.raw", "../sd.raw");
+        //merge one directory into another, overwriting files if they exist in both source and dest
+        //but leaving files that only exist in dest
+        //should be a library function imo
+        fn merge_dir_recursively(source: &Path, dest: &Path) -> Result<(), std::io::Error> {
+            create_dir_all(dest.join(source))?;
+            
+            for source_file in std::fs::read_dir(source)? {
+                let source_path = source_file?.path();
+                println!("{:?}", source_path);
+                if source_path.is_dir() {
+                    merge_dir_recursively(&source_path, dest)?;
+                }
+                else {
+                    println!("renaming {:?} to {:?}", &source_path, dest.join(&source_path));
+                    std::fs::rename(&source_path, dest.join(&source_path))?;
+                }
+            };
+            std::fs::remove_dir(source)?;
+            Ok(())
+        }
 
-        //start dolphin from the enclosing folder
-        let path = std::fs::canonicalize("Contents/MacOS/Dolphin")
+        //if zip was distributed with Contents outside the .app, put it in the .app
+        if zip_file.file_names().any(|name| name.starts_with("Contents")) {
+            if !zip_file.file_names().any(|name| name.starts_with("Dolphin.app")) {
+                let _ = std::fs::create_dir("Dolphin.app");
+                merge_dir_recursively(Path::new("Contents"), Path::new("Dolphin.app"))
+                    .expect("merge failed");
+            }
+        }
+
+        let path = std::fs::canonicalize("Dolphin.app/Contents/MacOS/Dolphin")
                 .expect("failed to find executable");
-        std::env::set_current_dir("..").unwrap();
         Command::new(path)
                 .spawn()
                 .expect("failed to execute process")
