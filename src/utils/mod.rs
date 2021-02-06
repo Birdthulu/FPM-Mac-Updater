@@ -7,6 +7,7 @@ use std::{
     io::copy,
     path::Path,
 };
+use std::ffi::OsStr;
 use zip::ZipArchive;
 use std::env;
 use std::process::Command;
@@ -89,20 +90,40 @@ pub async fn get_file() -> ZipArchive<File> {
     zip_file
 }
 
-pub async fn unzip_file(zip_file: ZipArchive<File>) {
+//merge one directory into another, overwriting files if they exist in both source and dest
+//but leaving files that only exist in dest
+//should be a library function imo
+fn merge_dir_recursively(source: &Path, dest: &Path) -> Result<(), std::io::Error> {
+    let new_dest = dest.join(source.file_name().unwrap());
+    //println!("creating {:?}", &new_dest);
+    create_dir_all(&new_dest)?;
+    
+    for source_file in std::fs::read_dir(source)? {
+        let new_path = source_file?.path();
+        //println!("{:?}", new_path);
+        if new_path.is_dir() {
+            merge_dir_recursively(&new_path, &new_dest)?;
+        }
+        else {
+            //println!("renaming {:?} to {:?}", &new_path, &new_dest.join(&new_path.file_name().unwrap()));
+            std::fs::rename(&new_path, &new_dest.join(&new_path.file_name().unwrap()))?;
+        }
+    };
+    //println!("removing {:?}", source);
+    std::fs::remove_dir(source)?;
+    Ok(())
+}
+
+pub async fn unzip_file(zip_file: ZipArchive<File>, dolphin_name: &std::ffi::OsStr) {
     let mut zip_file = zip_file;
+
+    let extract_dir = Path::new("./temp/ext");
+    std::fs::create_dir_all(extract_dir).unwrap();
     
     for i in 0..zip_file.len() {
         let mut file = zip_file.by_index(i).unwrap();
         println!("Extracting: {}", file.name());
-        let outpath = file.sanitized_name();
-
-        {
-            let comment = file.comment();
-            if !comment.is_empty() {
-                // println!("File {} comment: {}", i, comment);
-            }
-        }
+        let outpath = extract_dir.join(file.sanitized_name());
 
         if (&*file.name()).ends_with('/') {
             // println!(
@@ -138,50 +159,44 @@ pub async fn unzip_file(zip_file: ZipArchive<File>) {
         }
     }
 
+    if extract_dir.join("Dolphin.app").exists() && dolphin_name != "Dolphin.app" {
+        let new_path = extract_dir.join(dolphin_name);
+        assert!(!new_path.exists());
+        println!("renaming {:?} to {:?}", extract_dir.join("Dolphin.app"), &new_path);
+        std::fs::rename(extract_dir.join("Dolphin.app"), &new_path).unwrap();
+    }
+
+    for file in std::fs::read_dir(extract_dir).unwrap() {
+        let path = file.unwrap().path();
+        if path.is_dir() {
+            println!("merging {:?}", &path.file_name().unwrap_or(OsStr::new("")));
+            merge_dir_recursively(&path, Path::new(".")).unwrap();
+        }
+        else {
+            println!("copying {:?}", path.file_name().unwrap_or(OsStr::new("")));
+            std::fs::rename(&path, path.file_name().unwrap()).unwrap();
+        }
+    }
+
+    //TODO run this after errors, don't just crash
     remove_dir_all("./temp").expect("Could not delete file");
 
-    if env::consts::OS == ("windows") 
-    {
-        Command::new("Dolphin.exe")
-                .spawn()
-                .expect("failed to execute process")
-    } 
-    else 
-    {
-        //merge one directory into another, overwriting files if they exist in both source and dest
-        //but leaving files that only exist in dest
-        //should be a library function imo
-        fn merge_dir_recursively(source: &Path, dest: &Path) -> Result<(), std::io::Error> {
-            create_dir_all(dest.join(source))?;
-            
-            for source_file in std::fs::read_dir(source)? {
-                let source_path = source_file?.path();
-                println!("{:?}", source_path);
-                if source_path.is_dir() {
-                    merge_dir_recursively(&source_path, dest)?;
-                }
-                else {
-                    println!("renaming {:?} to {:?}", &source_path, dest.join(&source_path));
-                    std::fs::rename(&source_path, dest.join(&source_path))?;
-                }
-            };
-            std::fs::remove_dir(source)?;
-            Ok(())
-        }
 
-        //if zip was distributed with Contents outside the .app, put it in the .app
-        if zip_file.file_names().any(|name| name.starts_with("Contents")) {
-            if !zip_file.file_names().any(|name| name.starts_with("Dolphin.app")) {
-                let _ = std::fs::create_dir("Dolphin.app");
-                merge_dir_recursively(Path::new("Contents"), Path::new("Dolphin.app"))
-                    .expect("merge failed");
-            }
+    /*
+    //if zip was distributed with Contents outside the .app, put it in the .app
+    if zip_file.file_names().any(|name| name.starts_with("Contents")) {
+        if !zip_file.file_names().any(|name| name.starts_with("Dolphin.app")) {
+            let _ = std::fs::create_dir("Dolphin.app");
+            merge_dir_recursively(Path::new("Contents"), Path::new("Dolphin.app"))
+                .expect("merge failed");
         }
+    }
+    */
 
-        let path = std::fs::canonicalize("Dolphin.app/Contents/MacOS/Dolphin")
-                .expect("failed to find executable");
-        Command::new(path)
-                .spawn()
-                .expect("failed to execute process")
-    };
+    println!("launching {:?}", Path::new(dolphin_name).join("Contents/MacOS/Dolphin"));
+    let path = std::fs::canonicalize(Path::new(dolphin_name).join("Contents/MacOS/Dolphin"))
+            .expect("failed to find executable");
+    Command::new(path)
+            .spawn()
+            .expect("failed to execute process");
 }
