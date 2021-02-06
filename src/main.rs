@@ -13,6 +13,7 @@ async fn main() -> Result<(), std::io::Error> {
     println!("new path: {:?}", path);
     std::env::set_current_dir(path)?;
 
+    //get dolphin app's name from arg0, so that we can overwrite the correct one.
     let app_name = Path::new(arg0).components().rev().nth(3).unwrap().as_os_str();
 
     println!("pwd: {:?}", std::env::current_dir());

@@ -159,6 +159,8 @@ pub async fn unzip_file(zip_file: ZipArchive<File>, dolphin_name: &std::ffi::OsS
         }
     }
 
+    //rename Dolphin.app to the name of the dolphin that launched the updater
+    //so that we don't overwrite the wrong dolphin.
     if extract_dir.join("Dolphin.app").exists() && dolphin_name != "Dolphin.app" {
         let new_path = extract_dir.join(dolphin_name);
         assert!(!new_path.exists());
@@ -166,6 +168,7 @@ pub async fn unzip_file(zip_file: ZipArchive<File>, dolphin_name: &std::ffi::OsS
         std::fs::rename(extract_dir.join("Dolphin.app"), &new_path).unwrap();
     }
 
+    //merge everything from the extraction folder into the folder where dolphin is.
     for file in std::fs::read_dir(extract_dir).unwrap() {
         let path = file.unwrap().path();
         if path.is_dir() {
@@ -181,18 +184,7 @@ pub async fn unzip_file(zip_file: ZipArchive<File>, dolphin_name: &std::ffi::OsS
     //TODO run this after errors, don't just crash
     remove_dir_all("./temp").expect("Could not delete file");
 
-
-    /*
-    //if zip was distributed with Contents outside the .app, put it in the .app
-    if zip_file.file_names().any(|name| name.starts_with("Contents")) {
-        if !zip_file.file_names().any(|name| name.starts_with("Dolphin.app")) {
-            let _ = std::fs::create_dir("Dolphin.app");
-            merge_dir_recursively(Path::new("Contents"), Path::new("Dolphin.app"))
-                .expect("merge failed");
-        }
-    }
-    */
-
+    //launch dolphin
     println!("launching {:?}", Path::new(dolphin_name).join("Contents/MacOS/Dolphin"));
     let path = std::fs::canonicalize(Path::new(dolphin_name).join("Contents/MacOS/Dolphin"))
             .expect("failed to find executable");
