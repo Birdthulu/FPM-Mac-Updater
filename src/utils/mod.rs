@@ -69,10 +69,9 @@ pub async fn parallel_download(update_information: UpdateInformation) {
         .unwrap();
 }
 
-pub async fn get_download_information() -> UpdateInformation {
-    //TODO get this from commandline args, not hard coded
+pub async fn get_download_information(update_json_url: &str) -> UpdateInformation {
     let update_info = reqwest::get(
-        "https://projectplusgame.com/update.json",
+        update_json_url,
     )
     .await
     .unwrap()
