@@ -46,8 +46,8 @@ jobs:
         run: |
           cargo build --all --release && strip target/release/Updater
           cd "target/release/"
-          mv "Updater" ${{ github.workspace }}/build/Binaries/
           mkdir ${{ github.workspace }}/build/Binaries/
+          mv "Updater" ${{ github.workspace }}/build/Binaries/
           
       - name: "Package"
         if: success()
