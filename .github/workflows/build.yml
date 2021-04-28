@@ -53,8 +53,7 @@ jobs:
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
-          zip -r "MacUpdater.zip" Updater
-          mv "MacUpdater.zip" /artifact/
+          mv "Updater" /artifact/
 
       - name: "Publish"
         if: success()
