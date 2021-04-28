@@ -1,7 +1,5 @@
-use parallel_getter::ParallelGetter;
 use reqwest;
 use serde::Deserialize;
-use std::path::PathBuf;
 use std::{
     fs::{create_dir_all, remove_dir_all, File},
     io::copy,
@@ -11,13 +9,14 @@ use std::ffi::OsStr;
 use zip::ZipArchive;
 use std::env;
 use std::process::Command;
+use std::io::prelude::*;
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateInformation {
     pub hash: String,
     pub changelog: String,
     #[serde(rename = "updater-update")]
-    pub updater_update: String,
+    pub updater_update: Option<String>,
     #[serde(rename = "update-page")]
     pub update_page: String,
     #[serde(rename = "download-page-windows")]
@@ -26,7 +25,7 @@ pub struct UpdateInformation {
     pub download_page_mac: String,
 }
 
-pub async fn parallel_download(update_information: UpdateInformation) {
+pub async fn download(update_information: UpdateInformation) {
     let mut url = String::new();
     if env::consts::OS == ("windows")
     {
@@ -41,35 +40,31 @@ pub async fn parallel_download(update_information: UpdateInformation) {
 
     //TODO use system temp dir
     create_dir_all("./temp").expect("Could not create file");
-    let temp_dir = PathBuf::from("./temp");
-    let mut file = File::create("./temp/temp.zip").unwrap();
 
-    ParallelGetter::new(&url, &mut file)
-        // Optional path to store the parts.
-        .cache_path(temp_dir)
-        // Number of theads to use.
-        .threads(10)
-        // threshold (length in bytes) to determine when multiple threads are required.
-        .threshold_parallel(1 * 1024 * 1024)
-        // threshold for defining when to store parts in memory or on disk.
-        .threshold_memory(10 * 1024 * 1024)
-        // Callback for monitoring progress.
-        .callback(
-            5500,
-            Box::new(|progress, total| {
-                println!(
-                    "{} MiB of {} MiB downloaded",
-                    (progress / 1024) / 1024,
-                    (total / 1024) / 1024
-                );
-            }),
-        )
-        // Commit the parallel GET requests.
-        .get()
-        .unwrap();
+    let mut file = File::create("./temp/temp.zip").unwrap();
+    let mut res = reqwest::get(&url).await.expect("failed to download update file");
+
+    let mut last_update_time = std::time::Instant::now();
+    let file_size = res.content_length();
+    let mut downloaded = 0;
+
+    while let Some(chunk) = res.chunk().await.expect("error downloading update file") {
+        file.write_all(&chunk).expect("error saving update file");
+
+        //print download progress
+        downloaded += chunk.len();
+        let now = std::time::Instant::now();
+        if now.duration_since(last_update_time) > std::time::Duration::new(1, 0) {
+            last_update_time = now;
+            let file_size = file_size.map(|n| ((n / 1000) as f64 / 1000.).to_string()).unwrap_or(String::from("Unknown"));
+            println!("{} MB out of {} MB downloaded", (downloaded / 1000) as f64 / 1000., file_size);
+        }
+    }
+
 }
 
 pub async fn get_download_information(update_json_url: &str) -> UpdateInformation {
+    println!("getting update info from {}", update_json_url);
     let update_info = reqwest::get(
         update_json_url,
     )

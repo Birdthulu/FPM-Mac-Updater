@@ -7,7 +7,6 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-parallel-getter = "0.2.0"
 reqwest         = { version = "0.10.6", features = ["json"] }
 serde           = { version = "1.0.114", features = ["derive"] }
 tokio           = { version = "0.2.21", features = ["macros"] }
