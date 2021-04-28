@@ -45,6 +45,7 @@ jobs:
         shell: bash
         run: |
           cargo build --all --release && strip target/release/Updater
+          mkdir artifact
           cd "target/release/"
           mv "Updater" "${{ github.workspace }}"
           
