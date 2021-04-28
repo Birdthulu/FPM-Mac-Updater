@@ -46,17 +46,15 @@ jobs:
         run: |
           cargo build --all --release && strip target/release/Updater
           cd "target/release/"
-          mkdir ${{ github.workspace }}/build/Binaries/
-          mv "Updater" ${{ github.workspace }}/build/Binaries/
+          mv "Updater" "${{ github.workspace }}"
           
       - name: "Package"
         if: success()
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
-          cd  ./build/Binaries
           zip -r "MacUpdater.zip" Updater
-          mv "MacUpdater.zip" ../../artifact/
+          mv "MacUpdater.zip" /artifact/
 
       - name: "Publish"
         if: success()
